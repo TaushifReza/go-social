@@ -3,14 +3,16 @@ package store
 import (
 	"context"
 	"database/sql"
+
+	"github.com/TaushifReza/go-social/internal/model"
 )
 
 type Storage struct {
 	Posts interface {
-		Create(context.Context) error
+		Create(context.Context, *model.Posts) error
 	}
 	User interface {
-		Create(context.Context) error
+		Create(context.Context, *model.User) error
 	}
 }
 
