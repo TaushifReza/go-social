@@ -10,6 +10,7 @@ import (
 type Storage struct {
 	Posts interface {
 		Create(context.Context, *model.Posts) error
+		GetByID(ctx context.Context, id int64) (*model.Posts, error)
 	}
 	User interface {
 		Create(context.Context, *model.User) error

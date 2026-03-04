@@ -36,3 +36,31 @@ func (s *PostStore) Create(ctx context.Context, posts *model.Posts) error {
 
 	return nil
 }
+
+func (s *PostStore) GetByID(ctx context.Context, id int64) (*model.Posts, error) {
+	query := `
+	SELECT id, content, title, user_id, tags, created_at, updated_at
+	FROM posts
+	WHERE ID = ($1)
+	`
+	var post model.Posts
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&post.ID,
+		&post.Content,
+		&post.Title,
+		&post.UserID,
+		pq.Array(&post.Tags),
+		&post.CreatedAt,
+		&post.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &post, nil
+}
