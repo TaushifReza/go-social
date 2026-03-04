@@ -3,13 +3,35 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"reflect"
+	"strings"
+
+	"github.com/go-playground/validator/v10"
 )
+
+var Validate *validator.Validate
+
+func init() {
+	Validate = validator.New(validator.WithRequiredStructEnabled())
+
+	Validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		// Look for the "json" tag on the struct field
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+
+		// If the tag is "-", ignore it
+		if name == "-" {
+			return ""
+		}
+
+		return name
+	})
+}
 
 type JSONResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
 	Data    any    `json:"data,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Error   any    `json:"error,omitempty"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any) error {
@@ -28,16 +50,17 @@ func writeJSONSuccess(w http.ResponseWriter, status int, message string, data an
 }
 
 // Error helper
-func writeJSONError(w http.ResponseWriter, status int, message string, err error) error {
-	errString := "unknown error"
+func writeJSONError(w http.ResponseWriter, status int, message string, err any) error {
+	// If err is nil, provide a fallback, otherwise use the err as-is
+	var errData any = "unknown error"
 	if err != nil {
-		errString = err.Error()
+		errData = err
 	}
 
 	return writeJSON(w, status, JSONResponse{
 		Success: false,
 		Message: message,
-		Error:   errString,
+		Error:   errData,
 	})
 }
 

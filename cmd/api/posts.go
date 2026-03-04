@@ -15,7 +15,12 @@ import (
 func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request) {
 	var dto dto.CreatePostDto
 	if err := readJSON(w, r, &dto); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Send all required fields.", err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	if err := Validate.Struct(dto); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Validation failed", formatValidationErrors(err))
 		return
 	}
 
