@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -14,7 +15,7 @@ import (
 func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request) {
 	var dto dto.CreatePostDto
 	if err := readJSON(w, r, &dto); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeJSONError(w, http.StatusBadRequest, "Send all required fields.", err)
 		return
 	}
 
@@ -31,12 +32,12 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 
 	if err := app.store.Posts.Create(ctx, post); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
 		return
 	}
 
-	if err := writeJSON(w, http.StatusCreated, post); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+	if err := writeJSONSuccess(w, http.StatusCreated, "Post created successfully.", post); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
 		return
 	}
 }
@@ -45,7 +46,7 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "postID"), 10, 64)
 
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeJSONError(w, http.StatusBadRequest, "invalid id", err)
 		return
 	}
 	ctx := r.Context()
@@ -54,15 +55,15 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			writeJSONError(w, http.StatusNotFound, "post not found")
+			writeJSONError(w, http.StatusNotFound, "post not found", fmt.Errorf("invalid post id"))
 		default:
-			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
 		}
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, post); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+	if err := writeJSONSuccess(w, http.StatusOK, "Post retrived successfully.", post); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
 		return
 	}
 }

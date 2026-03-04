@@ -9,8 +9,7 @@ func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Reques
 		"version": app.config.version,
 	}
 
-	if err := writeJSON(w, http.StatusOK, data); err != nil {
-		// ERROR
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+	if err := writeJSONSuccess(w, http.StatusOK, "Healthy", data); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
 	}
 }
