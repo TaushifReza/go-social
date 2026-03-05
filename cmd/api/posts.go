@@ -72,3 +72,30 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (app *application) postDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "postID"), 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid post id", err)
+		return
+	}
+
+	ctx := r.Context()
+	err = app.store.Posts.DeletePostByID(ctx, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			writeJSONError(w, http.StatusNotFound, "post not found", fmt.Errorf("invalid post id"))
+		default:
+			writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
+		}
+		return
+	}
+
+	if err := writeJSONSuccess(w, http.StatusOK, "Post deleted", "Post deleted"); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
+		return
+	}
+}
+
+func (app *application) postUpdateHandler(w http.ResponseWriter, r *http.Request) {}

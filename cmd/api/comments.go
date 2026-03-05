@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (app *application) getCommentByPostID(w http.ResponseWriter, r *http.Request) {
+func (app *application) getCommentByPostIDHandler(w http.ResponseWriter, r *http.Request) {
 	postID, err := strconv.ParseInt(chi.URLParam(r, "postID"), 10, 64)
 
 	if err != nil {

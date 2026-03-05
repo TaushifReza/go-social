@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"log"
 
 	"github.com/TaushifReza/go-social/internal/model"
 	"github.com/lib/pq"
@@ -63,4 +64,28 @@ func (s *PostStore) GetByID(ctx context.Context, id int64) (*model.Posts, error)
 	}
 
 	return &post, nil
+}
+
+func (s *PostStore) DeletePostByID(ctx context.Context, id int64) error {
+	query := `
+	DELETE FROM posts
+	WHERE id = $1
+	`
+	// execute the DELETE query with context
+	result, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	// optionally, check number of row affected
+	rowAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Deleted %v rows", rowAffected)
+	if rowAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
