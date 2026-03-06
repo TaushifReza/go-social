@@ -110,12 +110,17 @@ func (app *application) postUpdateHandler(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 
 	if err := app.store.Posts.Update(ctx, post); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "something went wrong. please try again", err)
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again", err)
 		return
 	}
 
 	if err := writeJSONSuccess(w, http.StatusOK, "Post updated", post); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "something went wrong. please try again", err)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			writeJSONError(w, http.StatusBadRequest, "post not found", "post not found")
+		default:
+			writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again", err)
+		}
 		return
 	}
 }

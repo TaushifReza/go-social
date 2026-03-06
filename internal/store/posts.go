@@ -93,10 +93,10 @@ func (s *PostStore) DeletePostByID(ctx context.Context, id int64) error {
 func (s *PostStore) Update(ctx context.Context, post *model.Posts) error {
 	query := `
 		UPDATE posts
-		SET title = $1, content = $2
-		WHERE id = $3
+		SET title = $1, content = $2, version = version + 1
+		WHERE id = $3 AND version = $4
 	`
-	_, err := s.db.ExecContext(ctx, query, post.Title, post.Content, post.ID)
+	err := s.db.QueryRowContext(ctx, query, post.Title, post.Content, post.ID, post.Version).Scan(&post.Version)
 	if err != nil {
 		return err
 	}

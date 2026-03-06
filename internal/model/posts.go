@@ -9,5 +9,6 @@ type Posts struct {
 	UserID    int64     `json:"user_id"`
 	Tags      []string  `json:"tags"`
 	CreatedAt time.Time `json:"created_at"`
+	Version   int64     `json:"version"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
