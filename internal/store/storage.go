@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/TaushifReza/go-social/internal/dto"
 	"github.com/TaushifReza/go-social/internal/model"
 )
 
@@ -19,6 +20,7 @@ type Storage struct {
 	}
 	Users interface {
 		Create(context.Context, *model.User) error
+		GetUserbyID(ctx context.Context, id int64) (*dto.UserResponseDto, error)
 	}
 	Comments interface {
 		GetCommentByPostID(ctx context.Context, postID int64) ([]*model.Comment, error)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/TaushifReza/go-social/internal/dto"
 	"github.com/TaushifReza/go-social/internal/model"
 )
 
@@ -34,4 +35,30 @@ func (s *UserStore) Create(ctx context.Context, user *model.User) error {
 	}
 
 	return nil
+}
+
+func (s *UserStore) GetUserbyID(ctx context.Context, id int64) (*dto.UserResponseDto, error) {
+
+	query := `
+    	SELECT id, username, email, created_at
+    	FROM users
+    	WHERE id = $1
+	`
+	var user dto.UserResponseDto
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&user.ID,
+		&user.UserName,
+		&user.Email,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
