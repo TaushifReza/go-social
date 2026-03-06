@@ -3,9 +3,12 @@ package store
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/TaushifReza/go-social/internal/model"
 )
+
+var QueryTimeoutDuration = time.Second * 5
 
 type Storage struct {
 	Posts interface {
@@ -19,6 +22,7 @@ type Storage struct {
 	}
 	Comments interface {
 		GetCommentByPostID(ctx context.Context, postID int64) ([]*model.Comment, error)
+		Create(context.Context, *model.Comment) error
 	}
 }
 
