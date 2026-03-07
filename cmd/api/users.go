@@ -24,9 +24,43 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {}
+func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
+	followUser := getUserFromCtx(r)
 
-func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {}
+	// TODO get user from auth middleware
+	var userID int64 = 12
+
+	ctx := r.Context()
+
+	if err := app.store.Users.Follow(ctx, userID, followUser.ID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again", err)
+		return
+	}
+
+	if err := writeJSONSuccess(w, http.StatusOK, "Follow user success", "Follow user success"); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
+		return
+	}
+}
+
+func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
+	unFollowUser := getUserFromCtx(r)
+
+	// TODO get user from auth middleware
+	var userID int64 = 12
+
+	ctx := r.Context()
+
+	if err := app.store.Users.UnFollow(ctx, userID, unFollowUser.ID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again", err)
+		return
+	}
+
+	if err := writeJSONSuccess(w, http.StatusOK, "UnFollow user success", "UnFollow user success"); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
+		return
+	}
+}
 
 func (app *application) userContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

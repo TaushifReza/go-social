@@ -44,6 +44,8 @@ func (s *UserStore) GetUserbyID(ctx context.Context, id int64) (*dto.UserRespons
     	FROM users
     	WHERE id = $1
 	`
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
 	var user dto.UserResponseDto
 	err := s.db.QueryRowContext(
 		ctx,
@@ -61,4 +63,29 @@ func (s *UserStore) GetUserbyID(ctx context.Context, id int64) (*dto.UserRespons
 	}
 
 	return &user, nil
+}
+
+func (s *UserStore) Follow(ctx context.Context, userID int64, followUserID int64) error {
+	query := `
+    INSERT INTO followers (user_id, follower_id)
+    VALUES ($1, $2)
+    ON CONFLICT (user_id, follower_id) DO NOTHING
+    `
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx, query, followUserID, userID)
+	return err
+}
+
+func (s *UserStore) UnFollow(ctx context.Context, userID int64, followUserID int64) error {
+	query := `
+	DELETE FROM followers
+	WHERE user_id = $1 AND follower_id = $2
+	`
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx, query, followUserID, userID)
+	return err
 }

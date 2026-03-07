@@ -21,6 +21,8 @@ type Storage struct {
 	Users interface {
 		Create(context.Context, *model.User) error
 		GetUserbyID(ctx context.Context, id int64) (*dto.UserResponseDto, error)
+		Follow(ctx context.Context, userID int64, followUserID int64) error
+		UnFollow(ctx context.Context, userID int64, followUserID int64) error
 	}
 	Comments interface {
 		GetCommentByPostID(ctx context.Context, postID int64) ([]*model.Comment, error)
