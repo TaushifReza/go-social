@@ -3,8 +3,10 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
+	"github.com/TaushifReza/go-social/internal/dto"
 	"github.com/TaushifReza/go-social/internal/model"
 	"github.com/lib/pq"
 )
@@ -111,4 +113,54 @@ func (s *PostStore) Update(ctx context.Context, post *model.Posts) error {
 	}
 
 	return nil
+}
+
+func (s *PostStore) GetUserFeed(ctx context.Context, userID int64) ([]dto.PostWithMetaData, error) {
+	fmt.Println(userID)
+	query := `
+    SELECT
+        p.id, p.content,p.title, p.user_id,  p.tags, p.created_at, p.version, count(c.id) AS comments_count,u.id, u.username
+    FROM posts p
+        LEFT JOIN comments c ON c.post_id = p.id
+        LEFT JOIN users u ON p.user_id = u.id
+        JOIN followers f ON f.follower_id = p.user_id OR p.user_id = $1
+    WHERE f.user_id = $1 AND p.user_id = $1
+    GROUP BY p.id, p.created_at, u.id, u.username
+    ORDER BY p.created_at DESC;
+    `
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx, query, userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var feed []dto.PostWithMetaData
+	for rows.Next() {
+		var p dto.PostWithMetaData
+		err := rows.Scan(
+			&p.ID,
+			&p.Content,
+			&p.Title,
+			&p.UserID,
+			pq.Array(&p.Tags),
+			&p.CreatedAt,
+			&p.Version,
+			&p.CommentCount,
+			&p.User.ID,
+			&p.User.UserName,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		feed = append(feed, p)
+	}
+
+	return feed, nil
 }

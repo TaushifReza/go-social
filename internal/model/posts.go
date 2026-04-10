@@ -11,4 +11,6 @@ type Posts struct {
 	CreatedAt time.Time `json:"created_at"`
 	Version   int64     `json:"version"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Comment   []Comment `json:"comments"`
+	User      User      `json:"user"`
 }
