@@ -1,12 +1,11 @@
 package main
 
 import (
-	"log"
-
 	"github.com/TaushifReza/go-social/internal/db"
 	"github.com/TaushifReza/go-social/internal/env"
 	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 //	@title			Go Social API
@@ -43,6 +42,10 @@ func main() {
 		version: env.GetString("VERSION", "0.0.1"),
 	}
 
+	// Logger
+	logger := zap.Must(zap.NewProduction()).Sugar()
+	defer logger.Sync()
+
 	db, err := db.New(
 		config.db.addr,
 		config.db.maxOpenConns,
@@ -51,17 +54,21 @@ func main() {
 	)
 
 	if err != nil {
-		log.Panic("database connection error: ", err)
+		logger.Fatal("database connection error: ", err)
 	}
+
+	defer db.Close()
+	logger.Info("database connection established successfully.")
 
 	store := store.NewStorage(db)
 
 	app := &application{
 		config: config,
 		store:  store,
+		logger: logger,
 	}
 
 	mux := app.mount()
 
-	log.Fatal(app.run(mux))
+	logger.Fatal(app.run(mux))
 }
