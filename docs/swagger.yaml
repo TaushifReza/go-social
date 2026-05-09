@@ -55,6 +55,32 @@ paths:
       summary: Fetches a user profile
       tags:
       - users
+  /users/auth/users/:
+    post:
+      consumes:
+      - application/json
+      description: Register User
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Register User
+      tags:
+      - users
 securityDefinitions:
   ApiKeyAuth:
     in: header

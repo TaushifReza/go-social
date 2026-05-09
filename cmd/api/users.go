@@ -8,6 +8,8 @@ import (
 	"strconv"
 
 	"github.com/TaushifReza/go-social/internal/dto"
+	"github.com/TaushifReza/go-social/internal/model"
+	"github.com/TaushifReza/go-social/internal/utils"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -104,4 +106,57 @@ func (app *application) userContextMiddleware(next http.Handler) http.Handler {
 func getUserFromCtx(r *http.Request) *dto.UserResponseDto {
 	user, _ := r.Context().Value(userCtx).(*dto.UserResponseDto)
 	return user
+}
+
+// GetUser godoc
+//
+//	@Summary		Register User
+//	@Description	Register User
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//
+// @Param           payload body dto.UserRegisterationDto
+//
+//	@Success		200	{object}	model.User
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/users/auth/users/ [post]
+func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
+	var dto dto.UserRegisterationDto
+	if err := readJSON(w, r, &dto); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request", err.Error())
+		return
+	}
+
+	if err := Validate.Struct(dto); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Validation failed", formatValidationErrors(err))
+		return
+	}
+
+	hashPassword, err := utils.HashPassword(dto.Password)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Error while hashing password", err.Error())
+		return
+	}
+
+	user := &model.User{
+		UserName: dto.UserName,
+		Email:    dto.Email,
+		Password: hashPassword,
+	}
+
+	ctx := r.Context()
+
+	if err := app.store.Users.Create(ctx, user); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later.", err)
+		return
+	}
+
+	if err := writeJSONSuccess(w, http.StatusCreated, "user registered", user); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later.", err)
+		return
+	}
 }
