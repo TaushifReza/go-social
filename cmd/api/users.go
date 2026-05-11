@@ -171,3 +171,23 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 }
+
+func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+
+	if err := app.store.Users.Activate(r.Context(), token); err != nil {
+		switch {
+		case err.Error() == "invitation not found or invalid":
+			writeJSONError(w, http.StatusNotFound, err.Error(), nil)
+		case err.Error() == "invitation has expired":
+			writeJSONError(w, http.StatusGone, err.Error(), nil)
+		default:
+			// Log the actual error for debugging, but hide it from the user
+			app.logger.Errorw("activation failed", "error", err)
+			writeJSONError(w, http.StatusInternalServerError, "internal server error", nil)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusNoContent, nil)
+}

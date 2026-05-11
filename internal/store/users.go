@@ -77,6 +77,9 @@ func (s *UserStore) GetUserbyID(ctx context.Context, id int64) (*dto.UserRespons
 	)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("User not found")
+		}
 		return nil, err
 	}
 
@@ -130,7 +133,91 @@ func (s *UserStore) createUserInvitation(ctx context.Context, tx *sql.Tx, token 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
-	_, err := tx.ExecContext(ctx, query, token, userId, time.Now().Add(exp))
+	_, err := tx.ExecContext(ctx, query, token, userId, time.Now().UTC().Add(exp))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UserStore) Activate(ctx context.Context, token string) error {
+	// 1. Start a transaction
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	// Defer a rollback in case something fails before we commit
+	defer tx.Rollback()
+
+	// 2. Get the invitation (pass 'tx' if your query supports it, or use db)
+	invite, err := s.getUserInvitations(ctx, token)
+	if err != nil {
+		return err
+	}
+
+	// 3. Validate expiry
+	if time.Now().UTC().After(invite.Expire.UTC()) {
+		return errors.New("invitation has expired")
+	}
+
+	// 4. Update user to active
+	if err := s.updateIsActive(ctx, tx, invite.UserID); err != nil {
+		return err
+	}
+
+	// 5. Delete the token
+	if err := s.deleteInvitation(ctx, tx, token); err != nil {
+		return err
+	}
+
+	// 6. Commit the transaction
+	return tx.Commit()
+}
+
+func (s *UserStore) getUserInvitations(ctx context.Context, token string) (*model.UserInvitations, error) {
+	query := `
+	SELECT *
+	FROM user_invitations
+	WHERE token = ($1)`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	var user_invitations model.UserInvitations
+	if err := s.db.QueryRowContext(
+		ctx,
+		query,
+		token,
+	).Scan(
+		&user_invitations.Token,
+		&user_invitations.UserID,
+		&user_invitations.Expire,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+
+			return nil, errors.New("invitation not found or invalid")
+		}
+		return nil, err
+	}
+
+	return &user_invitations, nil
+}
+
+// Change s.db.ExecContext to tx.ExecContext
+func (s *UserStore) updateIsActive(ctx context.Context, tx *sql.Tx, userID int64) error {
+	query := `UPDATE users SET is_active = true WHERE id = $1`
+
+	_, err := tx.ExecContext(ctx, query, userID)
+	return err
+}
+
+func (s *UserStore) deleteInvitation(ctx context.Context, tx *sql.Tx, token string) error {
+	query := `DELETE FROM user_invitations WHERE token = $1`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	_, err := tx.ExecContext(ctx, query, token)
 	if err != nil {
 		return err
 	}
