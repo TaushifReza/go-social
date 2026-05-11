@@ -141,73 +141,65 @@ func (s *UserStore) createUserInvitation(ctx context.Context, tx *sql.Tx, token 
 }
 
 func (s *UserStore) Activate(ctx context.Context, token string) error {
-	// 1. Start a transaction
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	// Defer a rollback in case something fails before we commit
-	defer tx.Rollback()
+	return withTx(s.db, ctx, func(tx *sql.Tx) error {
+		// 1. Find the invitation
+		invite, err := s.getUserInvitations(ctx, tx, token) // Note: pass tx here
+		if err != nil {
+			return err
+		}
 
-	// 2. Get the invitation (pass 'tx' if your query supports it, or use db)
-	invite, err := s.getUserInvitations(ctx, token)
-	if err != nil {
-		return err
-	}
+		// 2. Validate expiry
+		if time.Now().UTC().After(invite.Expire.UTC()) {
+			return errors.New("invitation has expired")
+		}
 
-	// 3. Validate expiry
-	if time.Now().UTC().After(invite.Expire.UTC()) {
-		return errors.New("invitation has expired")
-	}
+		// 3. Update user status
+		if err := s.updateIsActive(ctx, tx, invite.UserID); err != nil {
+			return err
+		}
 
-	// 4. Update user to active
-	if err := s.updateIsActive(ctx, tx, invite.UserID); err != nil {
-		return err
-	}
+		// 4. Delete the token
+		if err := s.deleteInvitation(ctx, tx, token); err != nil {
+			return err
+		}
 
-	// 5. Delete the token
-	if err := s.deleteInvitation(ctx, tx, token); err != nil {
-		return err
-	}
-
-	// 6. Commit the transaction
-	return tx.Commit()
+		return nil
+	})
 }
 
-func (s *UserStore) getUserInvitations(ctx context.Context, token string) (*model.UserInvitations, error) {
+func (s *UserStore) getUserInvitations(ctx context.Context, tx *sql.Tx, token string) (*model.UserInvitations, error) {
+	// 1. Explicitly name columns to match your struct scan order
 	query := `
-	SELECT *
-	FROM user_invitations
-	WHERE token = ($1)`
+        SELECT token, user_id, expiry
+        FROM user_invitations
+        WHERE token = $1
+    `
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
-	var user_invitations model.UserInvitations
-	if err := s.db.QueryRowContext(
-		ctx,
-		query,
-		token,
-	).Scan(
-		&user_invitations.Token,
-		&user_invitations.UserID,
-		&user_invitations.Expire,
-	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	var invitation model.UserInvitations
 
+	// 2. Use 'tx' instead of 's.db' so it participates in the transaction
+	err := tx.QueryRowContext(ctx, query, token).Scan(
+		&invitation.Token,
+		&invitation.UserID,
+		&invitation.Expire,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("invitation not found or invalid")
 		}
 		return nil, err
 	}
 
-	return &user_invitations, nil
+	return &invitation, nil
 }
 
-// Change s.db.ExecContext to tx.ExecContext
-func (s *UserStore) updateIsActive(ctx context.Context, tx *sql.Tx, userID int64) error {
-	query := `UPDATE users SET is_active = true WHERE id = $1`
-
-	_, err := tx.ExecContext(ctx, query, userID)
+func (s *UserStore) updateIsActive(ctx context.Context, db DBQueryer, userID int64) error {
+	// Now this works whether you pass a transaction or the standard DB pool
+	_, err := db.ExecContext(ctx, "UPDATE users SET is_active = true WHERE id = $1", userID)
 	return err
 }
 

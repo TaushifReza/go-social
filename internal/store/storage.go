@@ -41,14 +41,28 @@ func NewStorage(db *sql.DB) Storage {
 	}
 }
 
+// This interface works for both *sql.DB and *sql.Tx
+type DBQueryer interface {
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+}
+
 func withTx(db *sql.DB, ctx context.Context, fn func(*sql.Tx) error) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
+	// This ensures we rollback if the function panics
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p) // re-throw panic after rolling back
+		}
+	}()
+
 	if err := fn(tx); err != nil {
-		_ = tx.Rollback()
+		_ = tx.Rollback() // Rollback on explicit error
 		return err
 	}
 
