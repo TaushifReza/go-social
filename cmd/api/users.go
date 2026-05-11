@@ -9,6 +9,7 @@ import (
 
 	"github.com/TaushifReza/go-social/internal/dto"
 	"github.com/TaushifReza/go-social/internal/model"
+	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/TaushifReza/go-social/internal/utils"
 	"github.com/go-chi/chi/v5"
 )
@@ -150,8 +151,18 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 
 	ctx := r.Context()
 
-	if err := app.store.Users.Create(ctx, user); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later.", err)
+	_, hashedToken := utils.CreateToken()
+
+	// store the user
+	if err := app.store.Users.CreateAndInvite(ctx, user, hashedToken, app.config.mail.exp); err != nil {
+		switch err {
+		case store.ErrDuplicateEmail:
+			writeJSONError(w, http.StatusInternalServerError, "Email already exists.", err)
+		case store.ErrDuplicateUsername:
+			writeJSONError(w, http.StatusBadRequest, "Username already exists.", err)
+		default:
+			writeJSONError(w, http.StatusBadRequest, "something went wrong. please try again later.", err)
+		}
 		return
 	}
 

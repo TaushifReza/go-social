@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/TaushifReza/go-social/internal/db"
 	"github.com/TaushifReza/go-social/internal/env"
 	"github.com/TaushifReza/go-social/internal/store"
@@ -40,6 +42,9 @@ func main() {
 		},
 		env:     env.GetString("ENV", "development"),
 		version: env.GetString("VERSION", "0.0.1"),
+		mail: mailConfig{
+			exp: time.Hour * 3, // 3 days
+		},
 	}
 
 	// Logger
