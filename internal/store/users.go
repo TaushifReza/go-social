@@ -8,6 +8,7 @@ import (
 
 	"github.com/TaushifReza/go-social/internal/dto"
 	"github.com/TaushifReza/go-social/internal/model"
+	"github.com/lib/pq"
 )
 
 var (
@@ -19,7 +20,7 @@ type UserStore struct {
 	db *sql.DB
 }
 
-func (s *UserStore) create(ctx context.Context, tx *sql.Tx, user *model.User) error {
+func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *model.User) error {
 	query := `
     INSERT INTO users (username, password, email)
     VALUES ($1, $2, $3) RETURNING id, created_at
@@ -38,13 +39,16 @@ func (s *UserStore) create(ctx context.Context, tx *sql.Tx, user *model.User) er
 	)
 
 	if err != nil {
-		switch {
-		case err.Error() == `pq: duplicate key value violates unique constrain "users_email_key"`:
-			return ErrDuplicateEmail
-		case err.Error() == `pq: duplicate key value violates unique constrain "users_username_key"`:
-			return ErrDuplicateUsername
-		default:
-			return err
+		if pqErr, ok := err.(*pq.Error); ok {
+			// 23505 is the code for unique_violation
+			if pqErr.Code == "23505" {
+				switch pqErr.Constraint {
+				case "users_email_key":
+					return ErrDuplicateEmail
+				case "users_username_key":
+					return ErrDuplicateUsername
+				}
+			}
 		}
 	}
 
@@ -108,7 +112,7 @@ func (s *UserStore) CreateAndInvite(ctx context.Context, user *model.User, token
 	// transaction wrapper
 	return withTx(s.db, ctx, func(tx *sql.Tx) error {
 		// create the user
-		if err := s.create(ctx, tx, user); err != nil {
+		if err := s.Create(ctx, tx, user); err != nil {
 			return err
 		}
 		// create the user invite
@@ -130,4 +134,5 @@ func (s *UserStore) createUserInvitation(ctx context.Context, tx *sql.Tx, token 
 	if err != nil {
 		return err
 	}
+	return nil
 }

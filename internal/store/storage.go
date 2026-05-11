@@ -21,6 +21,7 @@ type Storage struct {
 	}
 	Users interface {
 		CreateAndInvite(ctx context.Context, user *model.User, token string, invitationExp time.Duration) error
+		Create(ctx context.Context, tx *sql.Tx, user *model.User) error
 		GetUserbyID(ctx context.Context, id int64) (*dto.UserResponseDto, error)
 		Follow(ctx context.Context, userID int64, followUserID int64) error
 		UnFollow(ctx context.Context, userID int64, followUserID int64) error

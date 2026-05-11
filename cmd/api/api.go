@@ -87,10 +87,11 @@ func (app *application) mount() http.Handler {
 				r.Get("/feed/", app.getUserFeedHandler)
 			})
 
-			// Public route
-			r.Route("/auth", func(r chi.Router) {
-				r.Post("/register/", app.registerUserHandler)
-			})
+		})
+
+		// Public route
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register/", app.registerUserHandler)
 		})
 	})
 

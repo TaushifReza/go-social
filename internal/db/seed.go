@@ -91,12 +91,17 @@ func Seed(store store.Storage, db *sql.DB) {
 
 	// 1. Generate and Create Users
 	users := generateUsers(100)
+	tx, _ := db.BeginTx(ctx, nil)
+
 	for _, user := range users {
-		if err := store.Users.Create(ctx, user); err != nil {
+		if err := store.Users.Create(ctx, tx, user); err != nil {
+			_ = tx.Rollback()
 			fmt.Println("ERROR creating user: ", err)
 			return
 		}
 	}
+
+	tx.Commit()
 
 	// 2. Generate and Create Posts
 	posts := generatePosts(200, users)
