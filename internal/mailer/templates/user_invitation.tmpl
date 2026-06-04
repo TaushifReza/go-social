@@ -1,0 +1,16 @@
+{{ define "subject"}} Finish Registration {{ end }}
+
+{{ define "body" }}
+<!doctype html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <p>Hi {{ .Username }},</p>
+
+        <a href="{{ .ActivationURL}}"> {{ .ActivationURL }} </a>
+    </body>
+</html>
+
+{{ end }}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/TaushifReza/go-social/docs"
+	"github.com/TaushifReza/go-social/internal/mailer"
 	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,6 +18,7 @@ type application struct {
 	config config
 	store  store.Storage
 	logger *zap.SugaredLogger
+	mailer mailer.Client
 }
 
 type config struct {
@@ -28,7 +30,18 @@ type config struct {
 }
 
 type mailConfig struct {
-	exp time.Duration
+	sendGrid sendGridConfig
+	mailTrap mailTrapConfig
+	exp      time.Duration
+}
+
+type sendGridConfig struct {
+	apiKey    string
+	fromEmail string
+}
+type mailTrapConfig struct {
+	apiKey    string
+	fromEmail string
 }
 
 type dbConfig struct {

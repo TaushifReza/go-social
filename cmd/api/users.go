@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/TaushifReza/go-social/internal/dto"
+	"github.com/TaushifReza/go-social/internal/mailer"
 	"github.com/TaushifReza/go-social/internal/model"
 	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/TaushifReza/go-social/internal/utils"
@@ -163,6 +164,30 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		default:
 			writeJSONError(w, http.StatusBadRequest, "something went wrong. please try again later.", err)
 		}
+		return
+	}
+
+	isProdEnv := app.config.env == "production"
+	vars := struct {
+		Username      string
+		ActivationURL string
+	}{
+		Username:      user.UserName,
+		ActivationURL: hashedToken,
+	}
+	// send email
+	_, err = app.mailer.Send(mailer.UserInvitationTemplate, user.UserName, user.Email, vars, !isProdEnv)
+
+	if err != nil {
+		app.logger.Errorw("Error sending email", "error", err)
+
+		// rollback user creation if email fails (SAGA)
+		err := app.store.Users.Delete(ctx, user.ID)
+		if err != nil {
+			app.logger.Errorw("Error sending email", "error", err)
+		}
+
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later.", err)
 		return
 	}
 
