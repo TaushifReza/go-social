@@ -1,9 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"net/http"
 	"strings"
+
+	"github.com/TaushifReza/go-social/internal/auth"
+)
+
+// Define a private type for context keys to prevent third-party collisions
+type contextKey string
+
+const (
+	UserCtxKey  contextKey = "user_id"
+	EmailCtxKey contextKey = "email"
 )
 
 func (app *application) BasicAuthMiddleware() func(http.Handler) http.Handler {
@@ -37,4 +48,49 @@ func (app *application) BasicAuthMiddleware() func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func (app *application) AuthTokenMiddlware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				writeUnauthorized(w, "authorization header is missing", "authorization header is missing")
+				return
+			}
+
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				writeUnauthorized(w, "authorization header is missing", "authorization header is malformed")
+				return
+			}
+
+			token := parts[1]
+			claims, err := app.authenticator.VerifyToken(token, auth.AccessTokenType)
+			if err != nil {
+				writeUnauthorized(w, "unauthorized", "unauthorized")
+				return
+			}
+
+			ctx := r.Context()
+
+			// Use type-safe context keys
+			ctx = context.WithValue(ctx, UserCtxKey, claims.ID)
+			ctx = context.WithValue(ctx, EmailCtxKey, claims.Email)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// GetUserIDFromContext extracts the user ID and returns an "ok" boolean if it exists
+func (app *application) GetUserIDFromContext(ctx context.Context) (int64, bool) {
+	id, ok := ctx.Value(UserCtxKey).(int64)
+	return id, ok
+}
+
+// GetEmailFromContext extracts the email and returns an "ok" boolean if it exists
+func (app *application) GetEmailFromContext(ctx context.Context) (string, bool) {
+	email, ok := ctx.Value(EmailCtxKey).(string)
+	return email, ok
 }

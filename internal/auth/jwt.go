@@ -87,24 +87,30 @@ func (a *jwtAuthenticator) VerifyToken(tokenStr, tokenType string) (*Claims, err
 	tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 
 	token, err := jwt.ParseWithClaims(tokenStr, &jwtClaims{}, func(t *jwt.Token) (interface{}, error) {
+		// Validate the signing method matches what we expect
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
 		return []byte(a.jwtSecret), nil
-	})
+	},
+		jwt.WithExpirationRequired(),                                // Enforces that 'exp' must exist and be valid
+		jwt.WithAudience(a.aud),                                     // Validates the 'aud' matches
+		jwt.WithIssuer(a.iss),                                       // Validates the 'iss' matches
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}), // Restricts algorithms strictly to HS256
+	)
 
 	if err != nil {
-		fmt.Println("TOKEN PARSE ERROR:", err)
-		return nil, errors.New("could not parse token")
+		fmt.Println("TOKEN VALIDATION ERROR:", err)
+		return nil, errors.New("unauthorized: invalid or expired token")
 	}
 
 	wrapper, ok := token.Claims.(*jwtClaims)
 	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, errors.New("unauthorized: claims are invalid")
 	}
 
 	if wrapper.TokenType != tokenType {
-		return nil, errors.New("token type mismatch")
+		return nil, errors.New("unauthorized: token type mismatch")
 	}
 
 	// Safely map down to app's core data structure and return it

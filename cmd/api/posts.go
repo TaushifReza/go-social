@@ -29,7 +29,9 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userId := 1
+	ctx := r.Context()
+
+	userId, _ := app.GetUserIDFromContext(ctx)
 
 	post := &model.Posts{
 		Title:   dto.Title,
@@ -38,8 +40,6 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 		// TODO: change after auth
 		UserID: int64(userId),
 	}
-
-	ctx := r.Context()
 
 	if err := app.store.Posts.Create(ctx, post); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
