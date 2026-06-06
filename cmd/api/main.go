@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/TaushifReza/go-social/internal/auth"
 	"github.com/TaushifReza/go-social/internal/db"
 	"github.com/TaushifReza/go-social/internal/env"
 	"github.com/TaushifReza/go-social/internal/mailer"
@@ -54,6 +55,13 @@ func main() {
 				fromEmail: env.GetString("MAIL_TRAP_FROM_EMAIL", "noreply@taushifreza.com.np"),
 			},
 		},
+		auth: authConfig{
+			token: tokenConfig{
+				jwtSecret: env.GetString("JWT_SECRET", "jwt-secret"),
+				aud:       env.GetString("JWT_AUD", "go-social"),
+				iss:       env.GetString("JWT_ISS", "go-social"),
+			},
+		},
 	}
 
 	// Logger
@@ -81,11 +89,18 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	authenticator := auth.NewJWTAuthenticator(
+		config.auth.token.jwtSecret,
+		config.auth.token.aud,
+		config.auth.token.iss,
+	)
+
 	app := &application{
-		config: config,
-		store:  store,
-		logger: logger,
-		mailer: mailtrap,
+		config:        config,
+		store:         store,
+		logger:        logger,
+		mailer:        mailtrap,
+		authenticator: authenticator,
 	}
 
 	mux := app.mount()

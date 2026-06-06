@@ -229,3 +229,37 @@ func (s *UserStore) Delete(ctx context.Context, id int64) error {
 
 	return nil
 }
+
+func (s *UserStore) Login(ctx context.Context, email string) (*dto.LoginRepoResponseDto, error) {
+	query := `
+    	SELECT
+       	    id,
+            username,
+            email,
+            password
+    	FROM users
+    	WHERE email = $1
+	`
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	var res dto.LoginRepoResponseDto
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		email,
+	).Scan(
+		&res.ID,
+		&res.Username,
+		&res.Email,
+		&res.Password,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("Invalid credentials.")
+		}
+		return nil, err
+	}
+	return &res, nil
+}

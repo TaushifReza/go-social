@@ -216,3 +216,51 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 
 	writeJSON(w, http.StatusNoContent, nil)
 }
+
+func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
+	var dto dto.LoginDto
+	if err := readJSON(w, r, &dto); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	if err := Validate.Struct(dto); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "validation Failed", formatValidationErrors(err))
+		return
+	}
+
+	ctx := r.Context()
+
+	result, err := app.store.Users.Login(ctx, dto.Email)
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "Invalid credentials.", "Invalid credentials.")
+		return
+	}
+
+	// validate password
+	if err := utils.CheckPassword(dto.Password, result.Password); err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "Invalid credentials.", "Invalid credentials.")
+		return
+	}
+
+	// generated jwt token
+	accessToken, err := app.authenticator.GenerateAccessToken(result.ID, result.Email)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong please again later", "something went wrong please again later")
+		return
+	}
+	refreshToken, err := app.authenticator.GenerateRefreshToken(result.ID, result.Email)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong please again later", "something went wrong please again later")
+		return
+	}
+
+	if err := writeJSONSuccess(w, http.StatusOK, "User login success", map[string]string{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	}); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
+		return
+	}
+
+}

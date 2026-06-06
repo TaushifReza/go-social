@@ -27,6 +27,7 @@ type Storage struct {
 		UnFollow(ctx context.Context, userID int64, followUserID int64) error
 		Activate(context.Context, string) error
 		Delete(ctx context.Context, id int64) error
+		Login(ctx context.Context, email string) (*dto.LoginRepoResponseDto, error)
 	}
 	Comments interface {
 		GetCommentByPostID(ctx context.Context, postID int64) ([]*model.Comment, error)

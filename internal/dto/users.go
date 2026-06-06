@@ -14,3 +14,15 @@ type UserRegisterationDto struct {
 	Email    string `json:"email" validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
+
+type LoginDto struct {
+	Email    string `json:"email" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
+type LoginRepoResponseDto struct {
+	ID       int64
+	Username string
+	Email    string
+	Password string
+}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/TaushifReza/go-social/docs"
+	"github.com/TaushifReza/go-social/internal/auth"
 	"github.com/TaushifReza/go-social/internal/mailer"
 	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -15,10 +16,11 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
-	mailer mailer.Client
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	mailer        mailer.Client
+	authenticator auth.Authenticator
 }
 
 type config struct {
@@ -27,6 +29,14 @@ type config struct {
 	env     string
 	version string
 	mail    mailConfig
+	auth    authConfig
+}
+
+type dbConfig struct {
+	addr         string
+	maxOpenConns int
+	maxIdleConns int
+	maxIdleTime  string
 }
 
 type mailConfig struct {
@@ -39,16 +49,20 @@ type sendGridConfig struct {
 	apiKey    string
 	fromEmail string
 }
+
 type mailTrapConfig struct {
 	apiKey    string
 	fromEmail string
 }
 
-type dbConfig struct {
-	addr         string
-	maxOpenConns int
-	maxIdleConns int
-	maxIdleTime  string
+type authConfig struct {
+	token tokenConfig
+}
+
+type tokenConfig struct {
+	jwtSecret string
+	aud       string
+	iss       string
 }
 
 func (app *application) mount() http.Handler {
@@ -66,7 +80,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", app.healthCheckHandler)
+		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthCheckHandler)
 
 		docsURL := fmt.Sprintf("%s/swagger/doc.json", app.config.addr)
 		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsURL)))
@@ -107,6 +121,7 @@ func (app *application) mount() http.Handler {
 		// Public route
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register/", app.registerUserHandler)
+			r.Post("/login/", app.loginHandler)
 		})
 	})
 
