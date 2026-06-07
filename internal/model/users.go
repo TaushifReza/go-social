@@ -8,6 +8,7 @@ type User struct {
 	Email     string    `json:"email"`
 	Password  string    `json:"-"`
 	CreatedAt time.Time `json:"created_at"`
+	RoleID    int64     `json:"role_id"`
 }
 
 type UserInvitations struct {
