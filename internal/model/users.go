@@ -9,6 +9,7 @@ type User struct {
 	Password  string    `json:"-"`
 	CreatedAt time.Time `json:"created_at"`
 	RoleID    int64     `json:"role_id"`
+	Role      Role      `json:"role"`
 }
 
 type UserInvitations struct {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TaushifReza/go-social/internal/auth"
+	"github.com/TaushifReza/go-social/internal/dto"
 )
 
 // Define a private type for context keys to prevent third-party collisions
@@ -50,7 +51,7 @@ func (app *application) BasicAuthMiddleware() func(http.Handler) http.Handler {
 	}
 }
 
-func (app *application) AuthTokenMiddlware() func(http.Handler) http.Handler {
+func (app *application) AuthTokenMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -93,4 +94,38 @@ func (app *application) GetUserIDFromContext(ctx context.Context) (int64, bool) 
 func (app *application) GetEmailFromContext(ctx context.Context) (string, bool) {
 	email, ok := ctx.Value(EmailCtxKey).(string)
 	return email, ok
+}
+
+func (app *application) checkPostOwnership(role string, next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := getUserFromCtx(r)
+		post := getPostFromCtx(r)
+
+		if post.UserID == user.ID {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		allowed, err := app.checkRolePrecedence(r.Context(), user, role)
+		if err != nil {
+			writeJSONError(w, http.StatusForbidden, "something went wrong", err)
+			return
+		}
+
+		if !allowed {
+			writeForbidden(w, "Access denied", "Access denied")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) checkRolePrecedence(ctx context.Context, user *dto.UserResponseDto, roleName string) (bool, error) {
+	role, err := app.store.Roles.GetByName(ctx, roleName)
+	if err != nil {
+		return false, err
+	}
+
+	return user.Role.Level >= role.Level, nil
 }

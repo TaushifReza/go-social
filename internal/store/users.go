@@ -59,9 +59,10 @@ func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *model.User) er
 func (s *UserStore) GetUserbyID(ctx context.Context, id int64) (*dto.UserResponseDto, error) {
 
 	query := `
-    	SELECT id, username, email, created_at
+    	SELECT users.id, username, email, created_at, roles.*
     	FROM users
-    	WHERE id = $1
+        JOIN roles ON (users.role_id = roles.id)
+    	WHERE users.id = $1
 	`
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
@@ -75,6 +76,10 @@ func (s *UserStore) GetUserbyID(ctx context.Context, id int64) (*dto.UserRespons
 		&user.UserName,
 		&user.Email,
 		&user.CreatedAt,
+		&user.Role.ID,
+		&user.Role.Name,
+		&user.Role.Level,
+		&user.Role.Description,
 	)
 
 	if err != nil {

@@ -146,6 +146,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		UserName: dto.UserName,
 		Email:    dto.Email,
 		Password: hashPassword,
+		RoleID:   dto.RoleID,
 	}
 
 	ctx := r.Context()

@@ -33,6 +33,9 @@ type Storage struct {
 		GetCommentByPostID(ctx context.Context, postID int64) ([]*model.Comment, error)
 		Create(context.Context, *model.Comment) error
 	}
+	Roles interface {
+		GetByName(context.Context, string) (*model.Role, error)
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {

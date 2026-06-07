@@ -82,3 +82,6 @@ func writeUnauthorized(w http.ResponseWriter, message string, err any) error {
 	w.Header().Set("WWW-Authenticate", `Basic realm="Restricted Area"`)
 	return writeJSONError(w, http.StatusUnauthorized, message, err)
 }
+func writeForbidden(w http.ResponseWriter, message string, err any) error {
+	return writeJSONError(w, http.StatusForbidden, message, err)
+}
