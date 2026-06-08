@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,7 +21,42 @@ type userKey string
 const userCtx postKey = "user"
 
 func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromCtx(r)
+	id, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid id", err)
+		return
+	}
+	ctx := r.Context()
+
+	// get from cache
+	user, err := app.cacheStorage.Users.Get(ctx, id)
+
+	if err != nil {
+		// Optional: Log that Redis is down, but don't stop the request
+		fmt.Println("Cache system error:", err)
+	}
+
+	if user == nil {
+		// cache miss
+		fmt.Println("CACHE MISS - Fetching from DB")
+
+		user, err = app.store.Users.GetUserbyID(ctx, id)
+		if err != nil {
+			switch {
+			case errors.Is(err, sql.ErrNoRows):
+				writeJSONError(w, http.StatusNotFound, "user not found", "user not found")
+			default:
+				writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)
+			}
+			return
+		}
+		// set cache
+		if err := app.cacheStorage.Users.Set(ctx, user); err != nil {
+			fmt.Println("ERROR setting cache", err)
+		}
+	} else {
+		fmt.Println("CACHE HIT - Returning cached data")
+	}
 
 	if err := writeJSONSuccess(w, http.StatusOK, "User retrived successfully", user); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "something went wrong. please try again later", err)

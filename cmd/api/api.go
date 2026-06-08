@@ -7,6 +7,7 @@ import (
 
 	"github.com/TaushifReza/go-social/docs"
 	"github.com/TaushifReza/go-social/internal/auth"
+	"github.com/TaushifReza/go-social/internal/cache"
 	"github.com/TaushifReza/go-social/internal/mailer"
 	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -18,18 +19,20 @@ import (
 type application struct {
 	config        config
 	store         store.Storage
+	cacheStorage  cache.Storage
 	logger        *zap.SugaredLogger
 	mailer        mailer.Client
 	authenticator auth.Authenticator
 }
 
 type config struct {
-	addr    string
-	db      dbConfig
-	env     string
-	version string
-	mail    mailConfig
-	auth    authConfig
+	addr        string
+	db          dbConfig
+	env         string
+	version     string
+	mail        mailConfig
+	auth        authConfig
+	redisConfig redisConfig
 }
 
 type dbConfig struct {
@@ -63,6 +66,13 @@ type tokenConfig struct {
 	jwtSecret string
 	aud       string
 	iss       string
+}
+
+type redisConfig struct {
+	addr    string
+	pw      string
+	db      int
+	enabled bool
 }
 
 func (app *application) mount() http.Handler {
