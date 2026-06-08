@@ -15,7 +15,23 @@ type Storage struct {
 }
 
 func NewRedisStorage(rdb *redis.Client) Storage {
+	if rdb == nil {
+		return Storage{
+			Users: &NoOpStore{}, // Safely returns a no-op implementation
+		}
+	}
+
 	return Storage{
 		Users: &UserStore{rdb: rdb},
 	}
+}
+
+type NoOpStore struct{}
+
+func (n *NoOpStore) Get(ctx context.Context, userID int64) (*dto.UserResponseDto, error) {
+	return nil, nil // Always act like a cache miss safely
+}
+
+func (n *NoOpStore) Set(ctx context.Context, user *dto.UserResponseDto) error {
+	return nil // Safely do nothing
 }
