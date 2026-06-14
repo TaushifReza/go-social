@@ -1,10 +1,10 @@
 # GoSocial API 🚀
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/TaushifReza/go-social)](https://golang.org)
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://mit-license.org)
-[![Database](https://img.shields.io/badge/Database-PostgreSQL-blue)](https://www.postgresql.org)
-[![Cache](https://img.shields.io/badge/Cache-Redis-red)](https://redis.io)
-[![API Docs](https://img.shields.io/badge/API_Docs-Swagger-green)](https://swagger.io)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/TaushifReza/go-social?logo=go)](https://golang.org)
+[![License](https://img.shields.io/badge/license-MIT-blue?logo-mit)](https://mit-license.org)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL-blue?logo=postgresql)](https://www.postgresql.org)
+[![Cache](https://img.shields.io/badge/Cache-Redis-red?logo=redis)](https://redis.io)
+[![API Docs](https://img.shields.io/badge/API_Docs-Swagger-green?logo=swagger)](https://swagger.io)
 
 **GoSocial** is a high-performance, production-grade RESTful social network backend API designed using Go's clean-architecture principles. Built from the ground up to be scalable, secure, and resource-efficient, it implements industry-standard design patterns such as Cache-Aside caching, Optimistic Concurrency Control, Rate Limiting, Role-Based Access Control, and Transactional Rollbacks (SAGA).
 
