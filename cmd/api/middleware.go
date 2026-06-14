@@ -129,3 +129,16 @@ func (app *application) checkRolePrecedence(ctx context.Context, user *dto.UserR
 
 	return user.Role.Level >= role.Level, nil
 }
+
+func (app *application) RateLimiterMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if app.config.rateLimiter.Enabled {
+			if allow, retryAfter := app.rateLimiter.Allow(r.RemoteAddr); !allow {
+				writeJSONError(w, 429, "Limit exceed", retryAfter.String())
+				return
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

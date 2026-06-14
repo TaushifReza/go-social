@@ -8,6 +8,7 @@ import (
 	"github.com/TaushifReza/go-social/internal/db"
 	"github.com/TaushifReza/go-social/internal/env"
 	"github.com/TaushifReza/go-social/internal/mailer"
+	"github.com/TaushifReza/go-social/internal/ratelimiter"
 	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
@@ -70,6 +71,11 @@ func main() {
 				iss:       env.GetString("JWT_ISS", "go-social"),
 			},
 		},
+		rateLimiter: ratelimiter.Config{
+			RequestsPerTimeFrame: env.GetInt("RATELIMITER_REQUESTS_COUNT", 20),
+			TimeFrame:            time.Second * 5,
+			Enabled:              env.GetBool("RATE_LIMITER_ENABLED", true),
+		},
 	}
 
 	// Logger
@@ -108,6 +114,12 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	// Rate limiter
+	rateLimiter := ratelimiter.NewFixedWindowLimiter(
+		config.rateLimiter.RequestsPerTimeFrame,
+		config.rateLimiter.TimeFrame,
+	)
+
 	authenticator := auth.NewJWTAuthenticator(
 		config.auth.token.jwtSecret,
 		config.auth.token.aud,
@@ -121,6 +133,7 @@ func main() {
 		logger:        logger,
 		mailer:        mailtrap,
 		authenticator: authenticator,
+		rateLimiter:   rateLimiter,
 	}
 
 	mux := app.mount()

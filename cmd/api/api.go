@@ -14,6 +14,7 @@ import (
 	"github.com/TaushifReza/go-social/internal/auth"
 	"github.com/TaushifReza/go-social/internal/cache"
 	"github.com/TaushifReza/go-social/internal/mailer"
+	"github.com/TaushifReza/go-social/internal/ratelimiter"
 	"github.com/TaushifReza/go-social/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -28,6 +29,7 @@ type application struct {
 	logger        *zap.SugaredLogger
 	mailer        mailer.Client
 	authenticator auth.Authenticator
+	rateLimiter   ratelimiter.Limiter
 }
 
 type config struct {
@@ -38,6 +40,7 @@ type config struct {
 	mail        mailConfig
 	auth        authConfig
 	redisConfig redisConfig
+	rateLimiter ratelimiter.Config
 }
 
 type dbConfig struct {
@@ -88,6 +91,10 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	if app.config.rateLimiter.Enabled {
+		r.Use(app.RateLimiterMiddleware)
+	}
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
